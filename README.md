@@ -1,34 +1,3 @@
-# Arduino Auto Target Missile Launcher
-
-[![Watch the video](https://img.youtube.com/vi/3qiN1pMbKuA/0.jpg)](https://youtu.be/3qiN1pMbKuA)
-
-📺 **Watch the Full Build Video on YouTube**
-https://youtu.be/3qiN1pMbKuA
-
----
-
-## Project Overview
-
-This project demonstrates a **DIY Arduino Auto Target Missile Launcher** inspired by radar-based defense systems.
-An ultrasonic sensor mounted on a rotating servo scans the surrounding area like a radar system. When an object is detected within the defined distance, the launcher automatically rotates toward the target, raises the launcher arm, and activates the ignition module.
-
-This project is designed for **educational and demonstration purposes** related to Arduino programming, robotics, automation, and sensor systems.
-
-The full build process is available on the **AmithLabs YouTube channel**.
-
----
-
-## Main Features
-
-* Ultrasonic radar scanning system
-* Automatic target detection
-* Servo-controlled launcher rotation
-* Servo-controlled launcher elevation
-* Ignition activation system
-* Distance filtering for stable detection
-
----
-
 ## Hardware Components
 
 * Arduino Uno
@@ -84,35 +53,6 @@ This code controls:
 * Ignition activation
 
 ---
-
-## Project Images
-
-```
-Missile Launcher.jpg
-```
 ## Wiring Diagram
 
 ![Wiring Diagram](Schematic_Diagram.jpg)
-
----
-
-## YouTube Channel
-
-This project was created for the **AmithLabs** YouTube channel.
-
-Subscribe for more DIY electronics, robotics, and automation projects.
-
----
-
-## Disclaimer
-
-This project is created strictly for **educational and experimental purposes only**.
-It should be used responsibly and safely. The creator is not responsible for any misuse of the project.
-
----
-
-## Author
-
-**Amith Wijekoon**
-Automation & Electrical Engineering Specialist
-Creator of the **AmithLabs** YouTube Channel
