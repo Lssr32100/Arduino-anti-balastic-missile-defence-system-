@@ -1,22 +1,5 @@
 /*
   ---------------------------------------------------------
-  Project : DIY Auto Target Missile Launcher
-  Channel : AmithLabs
-  Author  : Amith Wijekoon
-  ---------------------------------------------------------
-
-  This Arduino project demonstrates a simple automatic
-  targeting system inspired by radar-based defense systems.
-
-  The ultrasonic sensor scans the environment using a servo
-  motor (radar servo). When an object is detected within the
-  defined target distance, the launcher rotates, raises the
-  arm, and activates an ignition module.
-
-  This project is intended for educational and demonstration
-  purposes related to Arduino, robotics, and automation.
-
-  ---------------------------------------------------------
   Hardware Connections
   ---------------------------------------------------------
 
