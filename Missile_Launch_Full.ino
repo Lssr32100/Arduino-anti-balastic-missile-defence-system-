@@ -1,4 +1,3 @@
-
 #include <Servo.h>
 
 // --------------------------------------------------
@@ -15,7 +14,7 @@ Servo radarServo;
 
 #define TRIG_PIN 3
 #define ECHO_PIN 2
-#define IGNITION_PIN 4
+#define INDICATOR_PIN 4   // LED or buzzer (harmless indicator output)
 
 // --------------------------------------------------
 // SYSTEM SETTINGS
@@ -27,11 +26,14 @@ Servo radarServo;
 #define ARM_INITIAL 0
 #define RADAR_INITIAL 0
 
-#define ARM_DETECT_POS 60
+#define ARM_TARGET_POS 60      // arm angle when pointing at the object
+#define INDICATOR_ON_TIME 1000 // ms the indicator stays on
 
 #define RADAR_MIN 0
 #define RADAR_MAX 180
 #define RADAR_STEP 3
+
+#define SERVO_STEP_DELAY 15    // ms per degree for smooth movement
 
 // --------------------------------------------------
 // SCANNING VARIABLES
@@ -39,10 +41,10 @@ Servo radarServo;
 
 int angle = RADAR_MIN;
 int direction = 1;
-
 int detectedAngle = 0;
 
-bool objectDetected = false;
+int rotaryPos = ROTARY_INITIAL;
+int armPos = ARM_INITIAL;
 
 // --------------------------------------------------
 // SYSTEM STATES
@@ -51,11 +53,28 @@ bool objectDetected = false;
 enum SystemState
 {
   SCANNING,
-  DETECTION,
-  RESET_SYSTEM
+  AIM_ROTARY,
+  MOVE_ARM,
+  INDICATE,
+  RETURN_ARM,
+  RETURN_ROTARY
 };
 
 SystemState currentState = SCANNING;
+
+// --------------------------------------------------
+// SMOOTH SERVO MOVE
+// --------------------------------------------------
+
+void moveServoSmooth(Servo &servo, int &currentPos, int targetPos)
+{
+  while (currentPos != targetPos)
+  {
+    currentPos += (targetPos > currentPos) ? 1 : -1;
+    servo.write(currentPos);
+    delay(SERVO_STEP_DELAY);
+  }
+}
 
 // --------------------------------------------------
 // ULTRASONIC DISTANCE FUNCTION
@@ -110,22 +129,18 @@ void setup()
 {
   Serial.begin(9600);
 
-  // Attach servos
   rotaryServo.attach(9);
   armServo.attach(10);
   radarServo.attach(11);
 
-  // Configure pins
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-  pinMode(IGNITION_PIN, OUTPUT);
+  pinMode(INDICATOR_PIN, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  // Safe initial output
-  digitalWrite(IGNITION_PIN, LOW);
+  digitalWrite(INDICATOR_PIN, LOW);
   digitalWrite(LED_BUILTIN, LOW);
 
-  // Initial servo positions
   rotaryServo.write(ROTARY_INITIAL);
   armServo.write(ARM_INITIAL);
   radarServo.write(RADAR_INITIAL);
@@ -143,37 +158,27 @@ void loop()
 {
   switch (currentState)
   {
-
-    // ----------------------------------------------
-    // STATE 1: CONTINUOUS RADAR SCANNING
-    // ----------------------------------------------
-
+    // STATE 1: radar sweep until something is in range
     case SCANNING:
     {
       radarServo.write(angle);
-
       delay(60);
 
       float distance = readDistanceFiltered();
 
       Serial.print("Angle: ");
       Serial.print(angle);
-
       Serial.print(" | Distance: ");
       Serial.println(distance);
 
       if (distance > 0 && distance <= TARGET_DISTANCE)
       {
         detectedAngle = angle;
-        objectDetected = true;
-
         Serial.println("OBJECT DETECTED");
-
-        currentState = DETECTION;
+        currentState = AIM_ROTARY;
         break;
       }
 
-      // Move forward or backward
       angle += direction * RADAR_STEP;
 
       if (angle >= RADAR_MAX)
@@ -181,60 +186,77 @@ void loop()
         angle = RADAR_MAX;
         direction = -1;
       }
-
       if (angle <= RADAR_MIN)
       {
         angle = RADAR_MIN;
         direction = 1;
       }
-
       break;
     }
 
-    // ----------------------------------------------
-    // STATE 2: HARMLESS DETECTION INDICATION
-    // ----------------------------------------------
-
-    case DETECTION:
+    // STATE 2: rotary servo turns to the detected direction
+    case AIM_ROTARY:
     {
       digitalWrite(LED_BUILTIN, HIGH);
-
-      Serial.print("Detected at angle: ");
+      Serial.print("Rotary moving to: ");
       Serial.println(detectedAngle);
 
-      // Return to a neutral indicator position
-      rotaryServo.write(ROTARY_INITIAL);
+      moveServoSmooth(rotaryServo, rotaryPos, detectedAngle);
+      delay(300);
 
-      // Raise indicator arm
-      armServo.write(ARM_DETECT_POS);
-
-      delay(1000);
-
-      currentState = RESET_SYSTEM;
-
+      currentState = MOVE_ARM;
       break;
     }
 
-    // ----------------------------------------------
-    // STATE 3: RESET
-    // ----------------------------------------------
-
-    case RESET_SYSTEM:
+    // STATE 3: arm (up/down) servo moves to the target angle
+    case MOVE_ARM:
     {
-      armServo.write(ARM_INITIAL);
+      Serial.println("Arm moving to target position");
 
-      rotaryServo.write(ROTARY_INITIAL);
+      moveServoSmooth(armServo, armPos, ARM_TARGET_POS);
+      delay(300);
 
+      currentState = INDICATE;
+      break;
+    }
+
+    // STATE 4: harmless indicator (LED / buzzer) turns on
+    case INDICATE:
+    {
+      Serial.println("Indicator ON");
+
+      digitalWrite(INDICATOR_PIN, HIGH);
+      delay(INDICATOR_ON_TIME);
+      digitalWrite(INDICATOR_PIN, LOW);
+
+      Serial.println("Indicator OFF");
+
+      currentState = RETURN_ARM;
+      break;
+    }
+
+    // STATE 5: arm returns to its initial position
+    case RETURN_ARM:
+    {
+      Serial.println("Arm returning");
+
+      moveServoSmooth(armServo, armPos, ARM_INITIAL);
+      delay(300);
+
+      currentState = RETURN_ROTARY;
+      break;
+    }
+
+    // STATE 6: rotary returns to centre, radar resumes
+    case RETURN_ROTARY:
+    {
+      moveServoSmooth(rotaryServo, rotaryPos, ROTARY_INITIAL);
       digitalWrite(LED_BUILTIN, LOW);
 
-      objectDetected = false;
-
-      delay(500);
-
-      currentState = SCANNING;
+      delay(300);
 
       Serial.println("Restarting radar scan");
-
+      currentState = SCANNING;
       break;
     }
   }
